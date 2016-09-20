@@ -117,27 +117,5 @@ case class PressedPage (
 
   override def branding(edition: Edition): Option[Branding] = frontProperties.branding(edition)
 
-  def sponsorshipType: Option[String] = {
-    if (isSponsored(None)) {
-      Option("sponsoredfeatures")
-    } else if (isAdvertisementFeature) {
-      Option("advertisement-features")
-    } else if (isFoundationSupported) {
-      Option("foundation-features")
-    } else {
-      None
-    }
-  }
-
-  def isSponsored(maybeEdition: Option[Edition] = None): Boolean =
-    keywordIds exists (DfpAgent.isSponsored(_, Some(metadata.sectionId), maybeEdition))
-  def hasMultipleSponsors = false // Todo: need to think about this
-  lazy val isAdvertisementFeature = keywordIds exists (DfpAgent.isAdvertisementFeature(_,
-      Some(metadata.sectionId)))
-  def hasMultipleFeatureAdvertisers = false // Todo: need to think about this
-  lazy val isFoundationSupported = keywordIds exists (DfpAgent.isFoundationSupported(_,
-      Some(metadata.sectionId)))
-  lazy val sponsor = keywordIds.flatMap(DfpAgent.getSponsor(_)).headOption
-
   def allItems = collections.flatMap(_.curatedPlusBackfillDeduplicated).distinct
 }
