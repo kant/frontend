@@ -23,8 +23,7 @@ define([
     'commercial/modules/third-party-tags',
     'commercial/modules/paidfor-band',
     'commercial/modules/paid-containers',
-    'commercial/modules/dfp/ophan-tracking',
-    'commercial/modules/badges'
+    'commercial/modules/dfp/ophan-tracking'
 ], function (
     Promise,
     config,
@@ -50,8 +49,7 @@ define([
     thirdPartyTags,
     paidforBand,
     paidContainers,
-    ophanTracking,
-    badges
+    ophanTracking
 ) {
     var primaryModules = [
         ['cm-thirdPartyTags', thirdPartyTags.init],
@@ -83,10 +81,6 @@ define([
             ['cm-hostedVideo', hostedVideo.init],
             ['cm-hostedGallery', hostedGallery.init],
             ['cm-hostedColours', hostedColours.init]);
-    }
-
-    if (!(config.switches.staticBadges && config.switches.staticContainerBadges)) {
-        primaryModules.push(['cm-badges', badges.init]);
     }
 
     if ((config.switches.disableStickyAdBannerOnMobile && detect.getBreakpoint() === 'mobile') ||
