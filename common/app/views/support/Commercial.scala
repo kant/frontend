@@ -4,6 +4,7 @@ import common.Edition
 import common.Edition.defaultEdition
 import common.commercial.{Sponsored, _}
 import common.dfp._
+import conf.switches.Switches.{containerBrandingFromCapi}
 import layout.{ColumnAndCards, ContentCard, FaciaContainer}
 import model.pressed.{CollectionConfig, PressedContent}
 import model.{ContentType, MetaData, Page, Tag, Tags}
@@ -19,6 +20,7 @@ object Commercial {
   }
 
   private def isBrandedContent(
+    dfpDependentCondition: => Boolean,
     page: Page,
     edition: Edition,
     sponsorshipType: SponsorshipType
@@ -26,15 +28,15 @@ object Commercial {
     page.branding(edition).exists(_.sponsorshipType == sponsorshipType)
 
   def isPaidContent(item: ContentType, page: Page): Boolean =
-    isBrandedContent(page, defaultEdition, PaidContent)
+    isBrandedContent(item.commercial.isAdvertisementFeature, page, defaultEdition, PaidContent)
 
   def isSponsoredContent(item: ContentType, page: Page)(implicit request: RequestHeader): Boolean = {
     val edition = Edition(request)
-    isBrandedContent(page, edition, Sponsored)
+    isBrandedContent(item.commercial.isSponsored(Some(edition)), page, edition, Sponsored)
   }
 
   def isFoundationFundedContent(item: ContentType, page: Page)(implicit request: RequestHeader): Boolean = {
-    isBrandedContent(page, defaultEdition, Foundation)
+    isBrandedContent(item.commercial.isFoundationSupported, page, defaultEdition, Foundation)
   }
 
   def isBrandedContent(item: ContentType, page: Page)(implicit request: RequestHeader): Boolean = {
@@ -82,12 +84,21 @@ object Commercial {
 
       def isPaid(containerModel: ContainerModel): Boolean = {
 
+        def isPaidBrandingAttributes(brandingAttributes: Option[SponsorDataAttributes]): Boolean =
+          brandingAttributes.exists(_.sponsorshipType == "advertisement-features")
+
         def isPaidBranding(branding: Option[Branding]): Boolean =
           branding.exists(_.sponsorshipType == PaidContent)
 
-        def isPaid(card: CardContent): Boolean = isPaidBranding(card.branding)
+        def isPaid(card: CardContent): Boolean = if (containerBrandingFromCapi.isSwitchedOn) {
+          isPaidBranding(card.branding)
+        } else false
 
-        val isPaidContainer = isPaidBranding(containerModel.branding)
+        val isPaidContainer = if (containerBrandingFromCapi.isSwitchedOn) {
+          isPaidBranding(containerModel.branding)
+        } else {
+          isPaidBrandingAttributes(containerModel.brandingAttributes)
+        }
 
         val isAllPaidContent = {
           val content = containerModel.content
@@ -98,9 +109,27 @@ object Commercial {
         isPaidContainer || isAllPaidContent
       }
 
-      lazy val isPaidContainer = container.showBranding && optContainerModel.exists(isPaid)
+      lazy val isPaidContainerInDfp =
+        containerBrandingFromCapi.isSwitchedOff && container.commercialOptions.isPaidContainer
 
-      !isPaidFront && isPaidContainer
+      lazy val isPaidContainerInCapi =
+        containerBrandingFromCapi.isSwitchedOn && container.showBranding && optContainerModel.exists(isPaid)
+
+      !isPaidFront && (isPaidContainerInDfp || isPaidContainerInCapi)
+    }
+
+    def mkSponsorDataAttributes(config: CollectionConfig): Option[SponsorDataAttributes] = {
+      DfpAgent.findContainerCapiTagIdAndDfpTag(config) map { tagData =>
+        val capiTagId = tagData.capiTagId
+        val dfpTag = tagData.dfpTag
+        def tagId(tagType: TagType) = if (dfpTag.tagType == tagType) Some(capiTagId) else None
+        SponsorDataAttributes(
+          sponsor = dfpTag.lineItems.headOption flatMap (_.sponsor),
+          sponsorshipType = dfpTag.paidForType.name,
+          seriesId = tagId(Series),
+          keywordId = tagId(Keyword)
+        )
+      }
     }
 
     def numberOfItems(container: FaciaContainer): Int = container.containerLayout.map {

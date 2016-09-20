@@ -88,9 +88,29 @@ final case class Commercial(
   hasInlineMerchandise: Boolean
 ) {
 
+  def sponsorshipType: Option[String] = {
+    if (isSponsored(None)) {
+      Option("sponsoredfeatures")
+    } else if (isAdvertisementFeature) {
+      Option("advertisement-features")
+    } else if (isFoundationSupported) {
+      Option("foundation-features")
+    } else {
+      None
+    }
+  }
+
+  def isSponsored(maybeEdition: Option[Edition]): Boolean =
+    DfpAgent.isSponsored(tags.tags, Some(metadata.sectionId), maybeEdition)
+
   def needsHighMerchandisingSlot(edition:Edition): Boolean = {
     DfpAgent.isTargetedByHighMerch(metadata.adUnitSuffix,tags.tags,edition,metadata.url)
   }
+
+
+  def javascriptConfig: Map[String, JsValue] = Map(
+    ("isAdvertisementFeature", JsBoolean(isAdvertisementFeature))
+  )
 
 }
 /**
@@ -368,6 +388,7 @@ trait ContentPage extends Page {
     metadata.javascriptConfig ++
     item.tags.javascriptConfig ++
     item.trail.javascriptConfig ++
+    item.commercial.javascriptConfig ++
     item.content.conditionalConfig ++
     item.content.javascriptConfig ++
     metadata.javascriptConfigOverrides
@@ -579,6 +600,7 @@ final case class Tags(
 
   lazy val richLink: Option[String] = tags.flatMap(_.richLinkId).headOption
   lazy val openModule: Option[String] = tags.flatMap(_.openModuleId).headOption
+  lazy val sponsor: Option[String] = DfpAgent.getSponsor(tags)
 
   // Tones are all considered to be 'News' it is the default so we do not list news tones explicitly
   def isNews = !(isLiveBlog || isComment || isFeature)
