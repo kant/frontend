@@ -10,7 +10,6 @@ define([
     'commercial/modules/close-disabled-slots',
     'commercial/modules/dfp/init',
     'commercial/modules/dfp/load',
-    'commercial/modules/dfp/sponsorships',
     'commercial/modules/front-commercial-components',
     'commercial/modules/gallery-adverts',
     'commercial/modules/hosted/about',
@@ -36,7 +35,6 @@ define([
     closeDisabledSlots,
     dfpInit,
     dfpLoad,
-    sponsorships,
     frontCommercialComponents,
     galleryAdverts,
     hostedAbout,
@@ -65,7 +63,6 @@ define([
 
     var secondaryModules = [
         ['cm-load', dfpLoad],
-        ['cm-sponsorships', sponsorships.init],
         ['cm-paidforBand', paidforBand.init],
         ['cm-paidContainers', paidContainers.init],
         ['cm-ready', function () {
