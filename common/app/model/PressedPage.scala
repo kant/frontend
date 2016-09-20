@@ -24,17 +24,10 @@ object PressedPage {
     val keywordIds: Seq[String] = frontKeywordIds(id)
     val contentType = if (isNetworkFront) GuardianContentTypes.NetworkFront else GuardianContentTypes.Section
 
-    val isAdvertisementFeature: Boolean = {
-      val adUnitSuffix = AdSuffixHandlingForFronts.extractAdUnitSuffixFrom(id, id)
-      val keywordSponsorship = KeywordSponsorshipHandling(id, adUnitSuffix, keywordIds)
-      keywordSponsorship.isAdvertisementFeature
-    }
-
     val faciaPageMetaData: Map[String, JsValue] = Map(
       "keywords" -> JsString(seoData.webTitle.capitalize),
       "keywordIds" -> JsString(keywordIds.mkString(",")),
-      "hasSuperStickyBanner" -> JsBoolean(PersonalInvestmentsCampaign.isRunning(keywordIds)),
-      "isAdvertisementFeature" -> JsBoolean(isAdvertisementFeature)
+      "hasSuperStickyBanner" -> JsBoolean(PersonalInvestmentsCampaign.isRunning(keywordIds))
     )
 
     val openGraph: Map[String, String] = Map(
