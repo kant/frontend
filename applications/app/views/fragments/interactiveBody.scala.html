@@ -31,12 +31,12 @@
                 @fragments.guBand()
             }
 
-            @fragments.headDefault(interactive, page, showBadge = true)
+            @fragments.headDefault(interactive, page)
 
             <div class="content__main tonal__main tonal__main--@toneClass(interactive)">
                 <div class="gs-container u-cf">
                     <div class="content__main-column">
-                        @fragments.contentMeta(interactive, page, showBadge = false)
+                        @fragments.contentMeta(interactive, page)
                     </div>
                 </div>
 
@@ -52,7 +52,7 @@
 
                 <div class="gs-container u-cf">
                     <div class="content__main-column content__meta-footer">
-                        @fragments.contentMeta(interactive, page, showBadge = false)
+                        @fragments.contentMeta(interactive, page)
                     </div>
                 </div>
             </div>
