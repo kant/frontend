@@ -82,6 +82,10 @@ object InlineStyles {
       document.select(rule.selector) foreach(el => el.attr("style", mergeStyles(rule, el.attr("style"))))
     }
 
+    inline sortBy(_.specifity) foreach { rule =>
+      document.select(rule.selector) foreach(el => el.attr("style", el.attr("style").replace(" !important", "")))
+    }
+
     Html(document.toString)
   }
 
