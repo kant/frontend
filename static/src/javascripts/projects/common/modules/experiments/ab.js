@@ -12,7 +12,6 @@ define([
     'common/modules/experiments/tests/hosted-article-onward-journey',
     'common/modules/experiments/tests/hosted-gallery-cta',
     'common/modules/experiments/tests/membership-engagement-banner',
-    'common/modules/experiments/tests/contributions-epic',
     'common/modules/experiments/tests/adblocking-response',
     'common/modules/experiments/tests/weekend-reading-email',
     'common/modules/experiments/tests/weekend-reading-promo',
@@ -31,7 +30,6 @@ define([
     HostedArticleOnwardJourney,
     HostedGalleryCallToAction,
     MembershipEngagementBannerTests,
-    ContributionsEpic,
     AdBlockingResponse,
     WeekendReadingEmail,
     WeekendReadingPromo,
@@ -44,7 +42,6 @@ define([
         new LiveBlogChromeNotificationsProd(),
         new HostedArticleOnwardJourney(),
         new HostedGalleryCallToAction(),
-        new ContributionsEpic(),
         new WeekendReadingEmail(),
         new WeekendReadingPromo(),
         new VideoButtonDuration()
