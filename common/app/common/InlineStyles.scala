@@ -10,9 +10,10 @@ import org.w3c.dom.css.{CSSRule => W3CSSRule, CSSRuleList}
 import play.twirl.api.Html
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable.ListMap
 import scala.util.Try
 
-case class CSSRule(selector: String, styles: Seq[CSSStyle]) {
+case class CSSRule(selector: String, styles: ListMap[String, String]) {
   val canInline = !selector.contains(":")
 
   // https://www.w3.org/TR/css3-selectors/#specificity
@@ -29,8 +30,6 @@ case class CSSRule(selector: String, styles: Seq[CSSStyle]) {
   override def toString() = s"$selector { ${CSSRule.styleString(styles)} }"
 }
 
-case class CSSStyle(property: String, value: String, isImportant: Boolean)
-
 object CSSRule {
   def fromW3(r: W3CSSRule): Option[Seq[CSSRule]] = {
     val rule = r.getCssText.split("\\{")
@@ -43,30 +42,18 @@ object CSSRule {
     }
   }
 
-  def makeStyles(styles: String): Seq[CSSStyle] = {
+  def makeStyles(styles: String): ListMap[String, String] = {
     styles.split(";(?!base)").flatMap { style =>
       val split = style.split(":(?!(\\w)|(//))")
 
       for {
         property <- split.lift(0)
         value <- split.lift(1)
-        isImportant = value.contains("!important")
-      } yield (property.trim, value.stripSuffix("!important").trim, isImportant)
-    }.foldLeft(Seq[CSSStyle]()){ case (acc, (property, value, isImportant)) =>
-      acc :+ CSSStyle(property, value, isImportant)
-    }
+      } yield property.trim -> value.trim
+    }.foldLeft(ListMap.empty[String, String])(_ + _)
   }
 
-  def styleString(styles: Seq[CSSStyle]): String = styles.map { case CSSStyle(k, v, isImportant) =>
-    s"$k: $v" + (if(isImportant) " !important" else "")
-  }.mkString("; ")
-
-  // !important breaks rendering in some versions of Outlook, and it's entirely redundant
-  // if all styles are inlined - we can use left-to-right precedence to ensure
-  // that all !important styles win out
-  def inlineStyleString(styles: Seq[CSSStyle]): String = styles.map { case CSSStyle(k, v, isImportant) =>
-    s"$k: $v"
-  }.mkString("; ")
+  def styleString(styles: ListMap[String, String]): String = styles.map { case (k, v) => s"$k: $v" }.mkString("; ")
 }
 
 object InlineStyles {
@@ -95,6 +82,10 @@ object InlineStyles {
       document.select(rule.selector) foreach(el => el.attr("style", mergeStyles(rule, el.attr("style"))))
     }
 
+    inline sortBy(_.specifity) foreach { rule =>
+      document.select(rule.selector) foreach(el => el.attr("style", el.attr("style").replace(" !important", "")))
+    }
+
     Html(document.toString)
   }
 
@@ -109,9 +100,6 @@ object InlineStyles {
       Try(cssParser.parseStyleSheet(source, null, null)).toOption map { sheet =>
         val (styles, others) = seq(sheet.getCssRules).partition(isStyleRule)
         val (inlineStyles, headStyles) = styles.flatMap(CSSRule.fromW3).flatten.partition(_.canInline)
-
-        inlineStyles.foreach(println)
-
         val newHead = (headStyles.map(_.toString) ++ others.map(_.getCssText)).mkString("\n")
 
         (inline ++ inlineStyles, (head :+ newHead).filter(_.nonEmpty))
@@ -122,9 +110,9 @@ object InlineStyles {
   }
 
   def mergeStyles(rule: CSSRule, existing: String): String = {
-    CSSRule.inlineStyleString(rule.styles.foldLeft(CSSRule.makeStyles(existing)) { (previousStyles, currentStyle) =>
-      if (previousStyles.exists(_.isImportant) && !currentStyle.isImportant) previousStyles
-      else previousStyles :+ currentStyle
+    CSSRule.styleString(rule.styles.foldLeft(CSSRule.makeStyles(existing)) { case (style, (property, value)) =>
+      if (style.get(property).exists(_.contains("!important")) && !value.contains("!important")) style
+      else style + (property -> value)
     })
   }
 
