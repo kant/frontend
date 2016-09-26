@@ -3,14 +3,13 @@ package common
 import java.io.StringReader
 
 import org.jsoup.Jsoup
-import org.jsoup.nodes.{Document, Element}
+import org.jsoup.nodes.Document
 import com.steadystate.css.parser.{SACParserCSS3, CSSOMParser}
 import org.w3c.css.sac.InputSource
 import org.w3c.dom.css.{CSSRule => W3CSSRule, CSSRuleList}
 import play.twirl.api.Html
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.ListMap
 import scala.util.Try
 
 case class CSSRule(selector: String, styles: Seq[CSSStyle]) {
@@ -92,27 +91,8 @@ object InlineStyles {
       head.map(css => el.appendChild(document.createElement("style").text(css)))
     }
 
-    val elementsWithStyles = for {
-      rule <- inline.sortBy(_.specifity)
-      element <- document.select(rule.selector)
-    } yield (element, rule.styles)
-
-    // TODO: what about if someone's set an inline style in the template?
-    // TODO: weird fonts
-    // TODO: extra <hr> elements don't have styling
-    // TODO: different width of body?
-    // TODO: why does removing the <style> blocks make it look more like the real email??
-
-    val elementsToStyles = elementsWithStyles.groupBy(_._1).mapValues(_.flatMap(_._2))
-    val elementsToStylesDeduplicated = elementsToStyles.mapValues { styles =>
-      styles.foldLeft(ListMap.empty[String, CSSStyle]) { (previousStyles, currentStyle) =>
-        if (previousStyles.get(currentStyle.property).exists(_.isImportant) && !currentStyle.isImportant) previousStyles
-        else previousStyles + (currentStyle.property -> currentStyle)
-      }.values.toSeq
-    }
-
-    elementsToStylesDeduplicated.foreach { case(el, styles) =>
-      el.attr("style", CSSRule.inlineStyleString(styles))
+    inline sortBy(_.specifity) foreach { rule =>
+      document.select(rule.selector) foreach(el => el.attr("style", mergeStyles(rule, el.attr("style"))))
     }
 
     Html(document.toString)
@@ -130,6 +110,8 @@ object InlineStyles {
         val (styles, others) = seq(sheet.getCssRules).partition(isStyleRule)
         val (inlineStyles, headStyles) = styles.flatMap(CSSRule.fromW3).flatten.partition(_.canInline)
 
+        inlineStyles.foreach(println)
+
         val newHead = (headStyles.map(_.toString) ++ others.map(_.getCssText)).mkString("\n")
 
         (inline ++ inlineStyles, (head :+ newHead).filter(_.nonEmpty))
@@ -137,6 +119,13 @@ object InlineStyles {
         (inline, head :+ element.html)
       }
     }
+  }
+
+  def mergeStyles(rule: CSSRule, existing: String): String = {
+    CSSRule.inlineStyleString(rule.styles.foldLeft(CSSRule.makeStyles(existing)) { (previousStyles, currentStyle) =>
+      if (previousStyles.exists(_.isImportant) && !currentStyle.isImportant) previousStyles
+      else previousStyles :+ currentStyle
+    })
   }
 
   private def seq(rules: CSSRuleList): Seq[W3CSSRule] = for (i <- 0 until rules.getLength) yield rules.item(i)
