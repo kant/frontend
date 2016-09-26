@@ -14,8 +14,8 @@ define([
         if (commentLink) {
             var user = id.getUserFromCookie();
 
-            commentLink.removeAttribute('hidden');
-            commentLink.setAttribute('href', 'https://profile.theguardian.com/user/id/' + user.id);
+                commentLink.removeAttribute('hidden');
+                commentLink.setAttribute('href', 'https://profile.theguardian.com/user/id/' + user.id);
         }
     }
 
@@ -24,9 +24,11 @@ define([
             var userAccountLinksContainer = qwery('.js-show-user-account-links')[0];
 
             if (userAccountLinksContainer) {
-                userAccountLinksContainer.classList.add('user-signed-in');
+                fastdom.write(function () {
+                    userAccountLinksContainer.classList.add('user-signed-in');
 
-                updateCommentLink();
+                    updateCommentLink();
+                });
             }
         }
     }
