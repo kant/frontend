@@ -78,13 +78,11 @@ object InlineStyles {
       head.map(css => el.appendChild(document.createElement("style").text(css)))
     }
 
-    inline sortBy(_.specifity) foreach { rule =>
+    inline.sortBy(_.specifity).foreach { rule =>
       document.select(rule.selector) foreach(el => el.attr("style", mergeStyles(rule, el.attr("style"))))
     }
 
-    inline sortBy(_.specifity) foreach { rule =>
-      document.select(rule.selector) foreach(el => el.attr("style", el.attr("style").replace(" !important", "")))
-    }
+    document.getAllElements.foreach(el => el.attr("style", el.attr("style").replace(" !important", "")))
 
     Html(document.toString)
   }
